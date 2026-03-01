@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSINT</title>
+    <style>
+        /* Базовые переменные (Темная тема по умолчанию) */
+        :root {
+            --bg-color: #0d0d0d;
+            --card-bg: #151515;
+            --border-color: #2b2b2b;
+            --text-main: #e0e0e0;
+            --text-muted: #808080;
+            --accent-color: #3b3b3b;
+            --accent-hover: #505050;
+            --active-color: #71aaeb;
+            --font-family: 'Inter', 'Segoe UI', Courier, monospace;
+            --btn-text: #e0e0e0;
+        }
+
+        /* Переменные Светлой темы */
+        body.light-theme {
+            --bg-color: #f7f7f9;
+            --card-bg: #ffffff;
+            --border-color: #e3e3e3;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --accent-color: #e0e0e0;
+            --accent-hover: #d1d1d1;
+            --active-color: #1a73e8;
+            --btn-text: #1a1a1a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            line-height: 1.6;
+            padding: 2rem 1rem;
+            font-size: 14px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        .header h1 { font-size: 1.6rem; font-weight: 500; letter-spacing: 1px; }
+        .header .status { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; }
+
+        /* Кнопка смены темы */
+        .theme-toggle {
+            background-color: var(--card-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        .theme-toggle:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            overflow-x: auto;
+            /* Плавная прокрутка для мобилок */
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            /* Скрытие скроллбара для эстетики */
+            scrollbar-width: none; 
+        }
+        .tabs::-webkit-scrollbar { display: none; }
+
+        .tab-btn {
+            background-color: var(--card-bg);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 6px 6px 0 0;
+            font-family: var(--font-family);
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            background-color: var(--accent-hover);
+            color: var(--btn-text);
+        }
+
+        .tab-btn.active {
+            background-color: var(--accent-color);
+            color: var(--btn-text);
+            border-top: 2px solid var(--active-color);
+        }
+        
+        /* В светлой теме цвет текста на активной вкладке делаем темным, если фон серый */
+        body.light-theme .tab-btn.active {
+            color: #1a1a1a; 
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .section-header {
+            background-color: rgba(128, 128, 128, 0.05);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 1.05rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .data-row {
+            display: flex;
+            padding: 0.8rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-row:last-child { border-bottom: none; }
+        .data-row:hover { background-color: rgba(128, 128, 128, 0.04); }
+
+        .data-key { width: 35%; color: var(--text-muted); font-size: 0.85rem; }
+        .data-value { width: 65%; color: var(--text-main); font-family: monospace; font-size: 0.95rem; word-break: break-word; }
+        .data-value a { color: var(--active-color); text-decoration: none; }
+        .data-value a:hover { text-decoration: underline; }
+
+        table { width: 100%; border-collapse: collapse; font-family: monospace; font-size: 0.9rem; }
+        th, td { padding: 10px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { background-color: rgba(128, 128, 128, 0.05); color: var(--text-muted); font-weight: normal; }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            background: var(--accent-color);
+            color: var(--active-color);
+            margin-left: 5px;
+        }
+
+        code {
+            background: rgba(128, 128, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        /* Адаптация под мобильные устройства */
+        @media (max-width: 600px) {
+            body { padding: 1rem 0.5rem; }
+            .header h1 { font-size: 1.3rem; }
+            .data-row { flex-direction: column; padding: 1rem; }
+            .data-key, .data-value { width: 100%; }
+            .data-key { margin-bottom: 0.4rem; font-weight: 600; color: var(--text-main); }
+            .tab-btn { padding: 10px 15px; font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header class="header">
+        <div>
+            <div class="status">Osint // Dox instruments</div>
+            <h1>Осинт // Докс инструменты</h1>
+        </div>
+        <button id="themeToggle" class="theme-toggle" title="Переключить тему">☀️</button>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab(event, 'Home')">Home</button>
+        <button class="tab-btn" onclick="openTab(event, 'Sherloc')">Sherloc</button>
+        <button class="tab-btn" onclick="openTab(event, 'Enigma')">Enigma</button>
+        <button class="tab-btn" onclick="openTab(event, 'FunStat')">FunStat</button>
+        <button class="tab-btn" onclick="openTab(event, 'Duxles')">Duxles</button>
+        <button class="tab-btn" onclick="openTab(event, 'Vektor')">Vektor</button>
+        <button class="tab-btn" onclick="openTab(event, 'BigBase')">BigBase</button>
+        <button class="tab-btn" onclick="openTab(event, 'Redirection')">Redirection</button>
+        <button class="tab-btn" onclick="openTab(event, 'VKHistoryRobot')">VKHistoryRobot</button>
+        <button class="tab-btn" onclick="openTab(event, 'FinesAndTaxes')">FinesAndTaxes</button>
+        <button class="tab-btn" onclick="openTab(event, 'Google_Dorks')">Google_Dorks</button>
+    </div>
+
+    <div id="Home" class="tab-content" style="display: block;">
+        <div class="section">
+            <div class="section-header">Home</div>
+            <div class="data-row">
+                <div class="data-key">Sherloc</div>
+                <div class="data-value"><a href="https://t.me/Yx8fdf8fyxov7xbot">@Yx8fdf8fyxov7xbot</a> - Шерлок, главный бот, популярный бот, лучший аналог gла3 бoгa, также там доступен поиск по фото.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Enigma</div>
+                <div class="data-value"><a href="https://t.me/Hixk8cbbot">@Hixk8cbbot</a> — расширенный поиск, чуть больше баз чем в Шерлоке, но дорого, лучше использовать Шерлок.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">FunStat</div>
+                <div class="data-value"><a href="https://t.me/nasdasdasd_bot">@nasdasdasd_bot</a> — аналитика чатов: где состоит пользователь, какие сообщения оставлял, связи с другими аккаунтами.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Duxles</div>
+                <div class="data-value"><a href="https://t.me/If7flvixivic7xiv7xbot">@If7flvixivic7xiv7xbot</a> — один из самых известных ботов, работает по username и ID, в боте есть спам по номеру, спам звонки, аноним звонок, проверка номера</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Vektor</div>
+                <div class="data-value"><a href="https://t.me/effffrgthyjhtgrefbot">@effffrgthyjhtgrefbot</a> — Поиск по 25 млрд документов. Режим "Vektor WW" для международных баз и Deep Search для архивных данных СССР.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">BigBase</div>
+                <div class="data-value"><a href="https://t.me/tsrkytdulyilkryjhybot">@tsrkytdulyilkryjhybot</a> — Система формирования полных досье. Особенность: метод random_dossier для генерации случайных личностей по фильтрам.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Redirection</div>
+                <div class="data-value"><a href="https://t.me/ghjuytredvbhjkijbot">@ghjuytredvbhjkijbot</a> — Массовый поиск по загруженным файлам (план CUSTOM) и льготный доступ для силовиков.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">VKHistoryRobot</div>
+                <div class="data-value"><a href="https://t.me/VKHistoryRobot">@VKHistoryRobot</a> — Позволяет смотреть данные (ФИО, друзья, аватарки) за период с 2010 по 2023 год.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">FinesAndTaxes</div>
+                <div class="data-value"><a href="https://t.me/ShtrafKZBot">@ShtrafKZBot</a> — Специализированный бот: ИИН/БИН, штрафы, техосмотр и карта преступности по GPS.</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="Sherloc" class="tab-content">
+        <div class="section">
+            <div class="section-header">Почем есть поиск?</div>
+            <div class="data-row">
+                <div class="data-key">🕵️ Личность:</div>
+                <div class="data-value">Навальный Алексей Анатольевич 04.06.1976 - ФИО</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📲 Контакты:</div>
+                <div class="data-value">79999688666 – номер телефона<br>79999688666@mail.ru – email</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🚘 Транспорт:</div>
+                <div class="data-value">В395ОК199 – номер автомобиля<br>XTA211440C5106924 – VIN автомобиля</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">💬 Социальные сети:</div>
+                <div class="data-value">vk.com/sherlock – Вконтакте<br>tiktok.com/@sherlock – Tiktok<br>instagram.com/sherlock – Instagram<br>ok.ru/profile/58460 – Одноклассники</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📟 Telegram:</div>
+                <div class="data-value">@sherlock, tg123456 – логин или ID</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📄 Документы:</div>
+                <div class="data-value">/vu 1234567890 – водительские права<br>/passport 1234567890 – паспорт<br>/snils 12345678901 – СНИЛС<br>/inn 123456789012 – ИНН</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🌐 Онлайн-следы:</div>
+                <div class="data-value">/tag хирург москва – поиск по телефонным книгам<br>sherlock.com или 1.1.1.1 – домен или IP</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🏚 Недвижимость:</div>
+                <div class="data-value">/adr Москва, Островитянова, 9к4, 94<br>(тут разраб бота не поясняет но запрос делается так /adr [Город], [Область] область, [Улица], [Номер дома если дропь то NкN], [Номер квартиры])<br>77:01:0004042:6987 - кадастровый номер </div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🏢 Юридическое лицо:</div>
+                <div class="data-value">/inn 2540214547 – ИНН<br>1107449004464 – ОГРН или ОГРНИП</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Поиск по неполной информации</div>
+                <div class="data-value">Минимум по двум переменным<br>Вот весь список переменных<br>Имя Фамилия Отчество День Месяц Год возраст от возраст возраст до Место рождения</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Цены & Способ оплата</div>
+            <div class="data-row">
+                <div class="data-key">Способ оплата</div>
+                <div class="data-value">СБП <br>Криптовалюта <br>Crypto Bot <br>Telegram Stars</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Цены</div>
+                <div class="data-value">15 - $1.5<br>75 - $6<br>300 - $21<br>1,000 - $50<br>3,000 - $120<br>10,000 - $300</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Можно ли скрытие данных из поиска?</div>
+            <div class="data-row">
+                <div class="data-key">Цена</div>
+                <div class="data-value">Цена одного слота: $500</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Что такое слот?</div>
+                <div class="data-value">Слот — это возможность скрыть один вид данных из поиска.<br>Например: одно ФИО с датой рождения, один номер телефона, один email или одну запись о родственнике.<br><br>Важно: услуга является дорогостоящей, поскольку скрытие данных является исключением из принципа свободного доступа к информации. Когда приватность — предмет роскоши.<br><br>Мы обязаны предоставить возможность — мы ее предоставили.<br>Мы не обязаны делать ее доступной — и не сделали.</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">👁 Отслеживание поисков</div>
+            <div class="data-row">
+                <div class="data-key">Что это?</div>
+                <div class="data-value">Это возможность отслеживать один вид данных при поиске.<br><br>Например: одно ФИО с датой рождения, один номер телефона, один email или одну запись о родственнике.<br><br>Когда выбранный параметр используется в поиске, вы получаете уведомление.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Сколько доступно?</div>
+                <div class="data-value">5</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Можно ли сделать Зерколо?</div>
+            <div class="data-row">
+                <div class="data-key">/\</div>
+                <div class="data-value">Да можно</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Есть ли рефералка?</div>
+                <div class="data-value">Да есть<br><br>🥇 За рефералов 1-й линии: 45%<br>🥈 За рефералов 2-й линии: 10%<br>🥉 За рефералов 3-й линии: 10%<br>🤖 За покупки любых пользователей в ваших ботах: 5%</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="Enigma" class="tab-content">
+        <div class="section">
+            <div class="section-header">🔍 Методы поиска (OSINT)</div>
+            <div class="data-row">
+                <div class="data-key">👤 Личность:</div>
+                <div class="data-value">Иванов Петр Сергеевич 15.03.1990 — ФИО + Дата</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📱 Связь:</div>
+                <div class="data-value">79123456789 — номер телефона (РФ, СНГ)<br>/h 79123456789 — статус, SMS-утилиты</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🚙 Транспорт:</div>
+                <div class="data-value">М777ММ777 — госномер автомобиля</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📄 Документы:</div>
+                <div class="data-value">/p 1234567890 — паспорт РФ<br>/s 12345678900 — СНИЛС<br>/i 123456789123 — ИНН</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📟 Telegram & Web:</div>
+                <div class="data-value">@username — логин<br>#id123456789 — цифровой ID<br>vk.com/id... — социальные сети</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📸 Media:</div>
+                <div class="data-value">Отправка фото — поиск лица в соцсетях<br>Отправка контакта — поиск по VCF/аккаунту</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">💰 Тарифы & Оплата</div>
+            <div class="data-row">
+                <div class="data-key">Базовая цена</div>
+                <div class="data-value">26₽ за один запрос</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Дисконтная сетка</div>
+                <div class="data-value">
+                    Баланс от 1 000₽ — 18₽/запрос<br>
+                    Баланс от 10 000₽ — 14₽/запрос<br>
+                    Баланс от 100 000₽ — 9₽/запрос<br>
+                    Баланс от 1 000 000₽ — 6₽/запрос
+                </div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Методы оплаты</div>
+                <div class="data-value">СБП, Карты РФ, CryptoBot, Криптовалюты, Stars</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">🛡️ Конфиденциальность (Privacy)</div>
+            <div class="data-row">
+                <div class="data-key">Скрытие данных</div>
+                <div class="data-value">1 000₽ за одну заявку (один человек)</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Условия</div>
+                <div class="data-value">Полное удаление из баз всех ботов сети в течение 24 часов.</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">🤝 Партнерская программа & Self-hosting</div>
+            <div class="data-row">
+                <div class="data-key">Рефералы</div>
+                <div class="data-value">30% с каждого платного запроса приглашенного пользователя.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Свой бот</div>
+                <div class="data-value">
+                    Конструктор «Зеркал»: Безопасность при блокировках + отсутствие лимитов Telegram API на скорость обработки.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="FunStat" class="tab-content">
+        <div class="section">
+            <div class="section-header">Что умеет искать FunStat?</div>
+            <div class="data-row">
+                <div class="data-key">👤 Аккаунт:</div>
+                <div class="data-value">@username или ID — полная история смены имен и юзернеймов</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📊 Активность:</div>
+                <div class="data-value">Упоминания в чатах, ссылки на сообщения, присутствие в группах</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🎨 Контент:</div>
+                <div class="data-value">Отправь стикер — узнаешь создателя стикерпака<br>Перешли пост — узнаешь, кто репостил его в другие чаты</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🏘 Группы и Каналы:</div>
+                <div class="data-value">@username или ID — подробная статистика участников и сообщений</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🔎 Глобальный поиск:</div>
+                <div class="data-value">/topchat — каталог чатов<br>/search — поиск по чатам<br>/text — поиск по тексту сообщений<br>/human — поиск по именам пользователей</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📈 База данных:</div>
+                <div class="data-value">>1 млрд пользователей, >60 млн чатов, >112 млрд сообщений</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Цены & Валюта</div>
+            <div class="data-row">
+                <div class="data-key">Внутренняя валюта:</div>
+                <div class="data-value">💠 Кристаллы (1 💠 = 1 рубль)</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Пакеты кристаллов:</div>
+                <div class="data-value">
+                    100 💠 — Базовый<br>
+                    350 💠 — (+10% бонус)<br>
+                    1,000 💠 — (+20% бонус)<br>
+                    10,000 💠 — (+50% бонус)
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">🛡 Скрытие данных (Privacy)</div>
+            <div class="data-row">
+                <div class="data-key">🥷 Ниндзя (500 💠)</div>
+                <div class="data-value">Скрывает группы, каналы, сообщения и глубокий анализ. Без лимита по времени.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🌑 Тень (1500 💠)</div>
+                <div class="data-value">Максимальная приватность: скрыто всё, кроме базы, рейтинга и подарков.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Особенности:</div>
+                <div class="data-value">Если вас ищут, бот пришлет уведомление: "ID *** интересовался вами". Скрытые аккаунты видят сами себя.</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">💰 Заработок (Монеты)</div>
+            <div class="data-row">
+                <div class="data-key">Реферальная система:</div>
+                <div class="data-value">От 5% до 30% от пополнений рефералов (зависит от количества приглашенных).</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Вывод средств:</div>
+                <div class="data-value">1 🪙 = 1 рубль. Вывод через @CryptoBot или обмен на кристаллы (1 к 2).</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">🔗 Зеркала и Сеть</div>
+            <div class="data-row">
+                <div class="data-key">Своё зеркало:</div>
+                <div class="data-value">Можно создать копию бота через @BotFather. Владелец зеркала получает +5% со всех пополнений в нем.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Бонусы за ссылки:</div>
+                <div class="data-value">+8 💠 за присланные ссылки на новые чаты.<br>+7 💠 за упоминание бота в активных группах.</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="Duxles" class="tab-content">
+        <div class="section">
+            <div class="section-header">Как работает поиск?</div>
+            <div class="data-row">
+                <div class="data-key">📱 Номер телефона:</div>
+                <div class="data-value">+79123456789</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🚗 Транспорт:</div>
+                <div class="data-value">О111ОО777 — номер авто<br>/vin XTA1234567890 — VIN-код</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🧑 Личность:</div>
+                <div class="data-value">Иванов Иван Иванович 10.01.1990 — ФИО + ДР<br>ivanov_ivan — никнейм</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📧 Контакты:</div>
+                <div class="data-value">example@mail.ru — почта<br>@ivanov — Telegram username</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📄 Документы:</div>
+                <div class="data-value">/inn 72030745922 — ИНН<br>/snils 123-456-789 00 — СНИЛС</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🏠 Адрес:</div>
+                <div class="data-value">/address Москва, ул. Ленина, 1</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Тарифы (Подписка)</div>
+            <div class="data-row">
+                <div class="data-key">🕒 Временные:</div>
+                <div class="data-value">
+                    3 дня — 270 ₽<br>
+                    7 дней — 375 ₽<br>
+                    30 дней — 1500 ₽<br>
+                    365 дней — 4500 ₽
+                </div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">♾️ Безлимит:</div>
+                <div class="data-value">Навсегда — 15 000 ₽</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Пакеты запросов</div>
+            <div class="data-row">
+                <div class="data-key">Розничные:</div>
+                <div class="data-value">
+                    50 шт. — 300 ₽<br>
+                    100 шт. — 600 ₽<br>
+                    300 шт. — 1700 ₽
+                </div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Оптовые:</div>
+                <div class="data-value">
+                    1000 шт. — 4000 ₽<br>
+                    3000 шт. — 10000 ₽<br>
+                    10000 шт. — 20000 ₽
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">🛡️ Скрытие данных (De-listing)</div>
+            <div class="data-row">
+                <div class="data-key">Бесплатно:</div>
+                <div class="data-value">Для граждан РФ/РБ через dyxless-hide.me (очередь до 3 мес.)</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Экспресс:</div>
+                <div class="data-value">5000 ₽ (скрытие за 48 часов через поддержку)</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">💰 Партнерская программа</div>
+            <div class="data-row">
+                <div class="data-key">Рефералы:</div>
+                <div class="data-value">
+                    🥇 1-й уровень: 50%<br>
+                    🥈 2-й уровень: 15%
+                </div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Зеркала:</div>
+                <div class="data-value">Возможность создать свое зеркало через @BotFather и получать 50% от наценки.</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="Vektor" class="tab-content">
+        <div class="section">
+            <div class="section-header">🔍 Возможности поиска Vektor</div>
+            <div class="data-row">
+                <div class="data-key">👤 Личность:</div>
+                <div class="data-value">
+                    Иван Иванов 01.01 — имя + дата<br>
+                    Иванов Иван Иванович 01.01.2000 — полное ФИО<br>
+                    Иванов Иван Иванович Москва 2000 — ФИО + город
+                </div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🚗 Транспорт:</div>
+                <div class="data-value">
+                    А001АА77 — гос. номер<br>
+                    XTA212130T1186583 — VIN-код
+                </div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🌐 Контакты & Соцсети:</div>
+                <div class="data-value">
+                    79221110500 — номер телефона<br>
+                    ivanov@mail.ru — E-mail<br>
+                    @username — логин Telegram<br>
+                    Igrok777 — универсальный никнейм
+                </div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📄 Документы:</div>
+                <div class="data-value">
+                    4616 233456 — паспорт РФ<br>
+                    7707083893 — ИНН (физ. и юр. лица)<br>
+                    00461487830 — СНИЛС<br>
+                    1027739099772 — ОГРН<br>
+                    II-МЮ №723184 — паспорт СССР (в Deep Search)
+                </div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">⚠️ Спец. режимы:</div>
+                <div class="data-value">
+                    <b>Многоуровневый поиск:</b> поиск по всем столбцам БД (возможны нерелевантные данные).<br>
+                    <b>Vektor WW:</b> поиск по международным (World Wide) базам данных.
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">💰 Тарифы подписки</div>
+            <div class="data-row">
+                <div class="data-key">Способы оплаты:</div>
+                <div class="data-value">СБП, перевод на карту, Криптовалюта (Heleket)</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Цены за доступ:</div>
+                <div class="data-value">
+                    1 день — 99₽<br>
+                    7 дней — 399₽<br>
+                    31 день — 599₽ (Выгодно! ⚡️)<br>
+                    180 дней — 1999₽<br>
+                    365 дней — 3599₽<br>
+                    <b>Навсегда — 9999₽</b>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">🛡 Скрытие данных (Тикеты)</div>
+            <div class="data-row">
+                <div class="data-key">Цена услуги:</div>
+                <div class="data-value">1 000₽ за один тикет</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Условия:</div>
+                <div class="data-value">
+                    Один тикет = одна персона. Можно указать ФИО, телефон, почту и другие данные, связанные с этим человеком. Обработка до 48 часов. Если тикет отклонят — средства вернутся на баланс.
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">🤖 Партнерская программа & API</div>
+            <div class="data-row">
+                <div class="data-key">Свой бот:</div>
+                <div class="data-value">
+                    Создание зеркала через BotFather. <br>
+                    <b>Доход:</b> 20% с пополнений 1-й линии + 5% со 2-й линии. <br>
+                    Возможность менять цены и забирать 50% наценки себе.
+                </div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Vektor API:</div>
+                <div class="data-value">
+                    Доступ к 25 млрд документов для ваших проектов.<br>
+                    Поиск: 2.5₽ / запрос.<br>
+                    Deep Search: 2.75₽ / запрос.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="BigBase" class="tab-content">
+        <div class="section">
+            <div class="section-header">🔍 Возможности поиска (OSINT)</div>
+            <div class="data-row">
+                <div class="data-key">👤 Идентификация:</div>
+                <div class="data-value">ФИО, дата рождения, поиск по неполным данным (город, улица)</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📱 Связь и Сети:</div>
+                <div class="data-value">Номер телефона, Email, Социальные сети</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🚘 Имущество:</div>
+                <div class="data-value">Авто (госномер, VIN), поиск по документам, Недвижимость</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🎲 Случайный поиск:</div>
+                <div class="data-value">Метод <code>random_dossier</code> — генерация случайного досье по заданным фильтрам (пол, год рождения, локация)</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🛠 Инструментарий:</div>
+                <div class="data-value">API для разработчиков (POST запросы, JSON), Система "Досье" (сборка полной информации в один отчет)</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">💰 Экономика: Запросы и Подписка</div>
+            <div class="data-row">
+                <div class="data-key">⚡️ Запросы (Баланс):</div>
+                <div class="data-value">Бессрочные единицы поиска. Списываются, если нет активной подписки или исчерпан лимит.<br>
+                    • 100 запросов — $20<br>
+                    • 1000 запросов — $100<br>
+                    • 10000 запросов — $500
+                </div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">👑 Подписка:</div>
+                <div class="data-value">Ежедневный пакет из <b>100 бесплатных запросов</b>. Обнуляется каждые сутки.<br>
+                    • 30 дней — $30<br>
+                    • 90 дней — $60<br>
+                    • 360 дней — $180
+                </div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🔄 Передача:</div>
+                <div class="data-value">Можно передать от 100 запросов другому пользователю (Комиссия 10%)</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">🤝 Партнерская программа</div>
+            <div class="data-row">
+                <div class="data-key">📈 Уровни дохода:</div>
+                <div class="data-value">
+                    🥇 1-я линия: 50% от покупок<br>
+                    🥈 2-я линия: 20% от покупок<br>
+                    🥉 3-я линия: 10% от покупок
+                </div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🎁 Бонусы:</div>
+                <div class="data-value">+5 бесплатных запросов за каждого приглашенного пользователя (после входа в Web App)</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">💸 Вывод средств:</div>
+                <div class="data-value">Доступен на <b>USDT TRC-20</b>. Фиксированная комиссия за вывод — $10.</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">🛡 Приватность и Условия</div>
+            <div class="data-row">
+                <div class="data-key">🌐 Источники:</div>
+                <div class="data-value">Только открытые источники (OSINT). Система не хранит данные, а индексирует их в реальном времени.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🔑 Анонимность:</div>
+                <div class="data-value">Вход через Telegram Web App. Возможность смены пароля и использования запасного бота.</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="Redirection" class="tab-content">
+        <div class="section">
+            <div class="section-header">Инструменты для поиска</div>
+            <div class="data-row">
+                <div class="data-key">👤 Люди (100 млн+):</div>
+                <div class="data-value">Поиск по ФИО, дате рождения, номеру телефона, email и адресу. Поиск друзей, коллег и однокурсников по открытым источникам.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🚘 Транспорт (50 млн+):</div>
+                <div class="data-value">Поиск по государственному номеру и VIN-коду (доступно в VIP).</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🏢 Компании (30 млн+):</div>
+                <div class="data-value">Поиск юридических лиц по ИНН, ОГРН и названию организации.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📟 Telegram:</div>
+                <div class="data-value">Поиск по Telegram ID и анализ комментариев пользователя (VIP-функция).</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🖼 Мультимедиа:</div>
+                <div class="data-value">Поиск по фото (количество попыток зависит от длительности подписки).</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📂 Работа с файлами:</div>
+                <div class="data-value">Массовый поиск по загруженному файлу с выдачей результатов в формате "досье" (План CUSTOM).</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Подписки & Тарифы</div>
+            <div class="data-row">
+                <div class="data-key">🆓 FREE (0 руб):</div>
+                <div class="data-value">Лимит: 3 запроса/день (6 для верифицированных).<br>Доступ: Только базовые источники (ФИО, Тел, Почта, Паспорт).</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🌟 VIP (Оптимально):</div>
+                <div class="data-value">Лимит: 100 запросов/день.<br>Доступ: VIP-источники, Авто (Номер/VIN), TG ID, поиск по фото.<br>Варианты: 2 дня / Неделя / Месяц / Год.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🛠 CUSTOM:</div>
+                <div class="data-value">Безлимит по дням (пакет запросов), многопользовательский доступ, поиск по файлам, индивидуальный формат выгрузки.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🚀 API:</div>
+                <div class="data-value">От 800 руб за 1000 запросов. Полная документация, уникальный ключ и поддержка разработчиков.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🪖 Льготы:</div>
+                <div class="data-value">Бесплатно для представителей силовых структур и участников СВО.</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">О сервисе</div>
+            <div class="data-row">
+                <div class="data-key">🛡 Безопасность:</div>
+                <div class="data-value">Сбор данных только из открытых общедоступных источников. Администрация не несет ответственности за достоверность данных.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">⚙️ Интеграция:</div>
+                <div class="data-value">Высокая скорость, надежность и легкое внедрение в бизнес-процессы через API.</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="VKHistoryRobot" class="tab-content">
+        <div class="section">
+            <div class="section-header">Как работает поиск?</div>
+            <div class="data-row">
+                <div class="data-key">🆔 Объект поиска:</div>
+                <div class="data-value">Числовой ID профиля ВКонтакте (например, 1 или 12345678)</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">⏳ Ретроспектива:</div>
+                <div class="data-value">
+                    Просмотр данных профиля за прошлые периоды:<br>
+                    2010, 2012, 2013, 2015, 2016, 2018, 2020, 2021, 2022, 2023 годы.
+                </div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📊 Что можно увидеть:</div>
+                <div class="data-value">Старые аватарки, изменения ФИО, прошлые статусы, скрытые ранее друзья или записи (в зависимости от глубины снимка базы).</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Обязательные условия</div>
+            <div class="data-row">
+                <div class="data-key">🔔 Подписка:</div>
+                <div class="data-value">
+                    Для работы с ботом необходима подписка на канал партнеров:<br>
+                    <strong>@LeakAlarm</strong> — мониторинг утечек баз данных.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="FinesAndTaxes" class="tab-content">
+        <div class="section">
+            <div class="section-header">Возможности поиска</div>
+            <div class="data-row">
+                <div class="data-key">🏢 ИИН/БИН:</div>
+                <div class="data-value">Проверка задолженностей по налогам и штрафам.<br>Пример: 123456789012</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🚘 Транспорт:</div>
+                <div class="data-value">Штрафы, сроки техосмотра, уведомления об окончании ТО.<br>Формат: [Гос.номер] [Номер техпаспорта]<br>Пример: A111ABN AS00123456</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🚨 Безопасность:</div>
+                <div class="data-value">Поиск ближайших пунктов полиции и статистика преступлений в радиусе 1 км по GPS.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🛠 Техсервис:</div>
+                <div class="data-value">Поиск 3-х ближайших мест проведения техосмотра по геолокации.</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Premium Подписка</div>
+            <div class="data-row">
+                <div class="data-key">Цена:</div>
+                <div class="data-value">2990 ₸ за 33 дня</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Функции:</div>
+                <div class="data-value">
+                    • Безлимитные проверки ИИН/БИН<br>
+                    • Авто-проверка штрафов каждые 3 дня<br>
+                    • <b>Privacy Mode:</b> Запрет доступа к вашим данным для других пользователей бота
+                </div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Лимиты:</div>
+                <div class="data-value">Максимум 6 ИИН/БИН на отслеживание.</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Реферальная система & Рейтинг</div>
+            <div class="data-row">
+                <div class="data-key">Бонус:</div>
+                <div class="data-value">🔥 +1 час Premium за каждого нового пользователя.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Best of the Best:</div>
+                <div class="data-value">Топ-10 пользователей по количеству приглашенных (лидеры имеют более 1900 рефералов).</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Поддержка и Информация</div>
+            <div class="data-row">
+                <div class="data-key">👨‍💻 Связь:</div>
+                <div class="data-value">Чат поддержки: @ShtrafKZBotSupport<br>Канал обновлений: @ShtrafKZBotChannel</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">⚖️ Правовая база:</div>
+                <div class="data-value">Данные из открытых официальных источников. <br>Согласие на обработку ПД в рамках Закона РК. <br>Команда для оферты: /oferta</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="Google_Dorks" class="tab-content">
+        <div class="section">
+            <div class="section-header">🔍 Что такое Google Dorks?</div>
+            <div class="data-row">
+                <div class="data-key">ℹ️ Суть:</div>
+                <div class="data-value">Использование продвинутых операторов поиска для обнаружения уязвимостей, скрытых файлов и конфиденциальных данных (OSINT).</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">🛠 Базовые операторы</div>
+            <div class="data-row">
+                <div class="data-key">🌐 Домен:</div>
+                <div class="data-value"><code>site:example.com</code> — поиск только по конкретному ресурсу.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🔗 URL:</div>
+                <div class="data-value"><code>inurl:admin</code> — поиск ключевых слов в адресе страницы.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📄 Файлы:</div>
+                <div class="data-value"><code>filetype:pdf</code>, <code>filetype:env</code>, <code>filetype:log</code> — поиск документов и конфигов.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">📝 Текст:</div>
+                <div class="data-value"><code>intitle:"index of"</code> — поиск открытых директорий на сервере.<br><code>intext:"password"</code> — поиск по содержимому страниц.</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">🛡 Примеры для Пентестинга</div>
+            <div class="data-row">
+                <div class="data-key">📂 Директории:</div>
+                <div class="data-value"><code>site:target.com intitle:"index of /backup"</code></div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🔑 Утечки:</div>
+                <div class="data-value"><code>site:target.com filetype:sql "insert into"</code> — дампы БД.<br><code>site:target.com "root" "password" filetype:env</code> — ключи окружения.</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">🚪 Админки:</div>
+                <div class="data-value"><code>site:target.com inurl:login | inurl:admin</code></div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">⚠️ Ошибки SQL:</div>
+                <div class="data-value"><code>site:target.com intext:"SQL syntax error"</code></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">💡 Советы для Python-разработчика</div>
+            <div class="data-row">
+                <div class="data-key">Автоматизация:</div>
+                <div class="data-value">Используй библиотеки <code>googlesearch-python</code> или <code>beautifulsoup4</code> для написания своего парсера дорков. Но помни про капчу и прокси!</div>
+            </div>
+            <div class="data-row">
+                <div class="data-key">Базы данных:</div>
+                <div class="data-value">Заглядывай в <b>Exploit Database (GHDB)</b> для поиска самых свежих и актуальных дорков.</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // Логика переключения вкладок
+    function openTab(evt, tabName) {
+        var tabcontent = document.getElementsByClassName("tab-content");
+        for (var i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+
+        var tablinks = document.getElementsByClassName("tab-btn");
+        for (var i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove("active");
+        }
+
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.classList.add("active");
+    }
+
+    // Логика переключения тем
+    const themeToggle = document.getElementById('themeToggle');
+    const body = document.body;
+
+    // Проверяем сохраненную тему (чтобы не слетала при перезагрузке)
+    if (localStorage.getItem('theme') === 'light') {
+        body.classList.add('light-theme');
+        themeToggle.textContent = '🌙';
+    }
+
+    themeToggle.addEventListener('click', () => {
+        body.classList.toggle('light-theme');
+        
+        if (body.classList.contains('light-theme')) {
+            localStorage.setItem('theme', 'light');
+            themeToggle.textContent = '🌙'; // Иконка для перехода обратно в темную
+        } else {
+            localStorage.setItem('theme', 'dark');
+            themeToggle.textContent = '☀️'; // Иконка для перехода в светлую
+        }
+    });
+</script>
+
+</body>
+</html>
